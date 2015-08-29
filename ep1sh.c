@@ -15,7 +15,7 @@ int main(int argc, char **argv, char **envp) {
     char *parameters[1024];
 
     while (1) {	// inicio do shell
-    	if (getcwd(prompt, sizeof(prompt)) != NULL) // pega e imprime o path no prompt
+    	if (getcwd(prompt, sizeof(prompt)) != NULL) // imprime o path no prompt entre colchetes
  			printf("[%s] ", prompt); 
  		else
  			perror("getcwd()");
