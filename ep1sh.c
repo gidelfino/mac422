@@ -4,7 +4,6 @@
 #include <unistd.h>
 
 int main(int argc, char **argv, char **envp) {
-	
 	pid_t pid;
 	int i;
 	int status;
