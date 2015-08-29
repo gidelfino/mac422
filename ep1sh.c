@@ -38,9 +38,9 @@ int main(int argc, char **argv, char **envp) {
  			if (parameters[1] != NULL)
  				if (chdir(parameters[1]) != 0)
  					perror("chdir()");
- 		if (strcmp(command, "pwd") == 0) // pwd
+ 		else if (strcmp(command, "pwd") == 0) // pwd
  			printf("%s\n", prompt);
- 		else                             // ./ep1 <argumentos do EP1>
+ 		else                             // /bin/ls -1      e     ./ep1 <argumentos do EP1>
  			switch (pid = fork()) {
 				case -1: // erro
 					perror("fork()");
