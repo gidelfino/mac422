@@ -33,12 +33,14 @@ int main(int argc, char **argv, char **envp) {
  		else
  			perror("fgets()");
 
- 		if (strcmp(command, "cd") == 0)  // cd <novo diretorio para mudar>
+ 		if (strcmp(command, "cd") == 0) {  // cd <novo diretorio para mudar>
  			if (parameters[1] != NULL)
  				if (chdir(parameters[1]) != 0)
  					perror("chdir()");
- 		if (strcmp(command, "pwd") == 0) // pwd
- 			printf("%s\n", prompt);
+		}
+ 		else if (strcmp(command, "pwd") == 0) { // pwd
+	 		printf("%s\n", prompt);
+		}
  		else                             // ./ep1 <argumentos do EP1>
  			switch (pid = fork()) {
 				case -1: // erro
