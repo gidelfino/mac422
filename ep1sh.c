@@ -14,7 +14,7 @@ int main(int argc, char **argv, char **envp) {
     char *parameters[1024];
 
     while (1) {	// inicio do shell
-    	if (getcwd(prompt, sizeof(prompt)) != NULL) // pega e imprime o path no prompt
+    	if (getcwd(prompt, sizeof(prompt)) != NULL) // imprime o path no prompt entre colchetes
  			printf("[%s] ", prompt); 
  		else
  			perror("getcwd()");
@@ -33,26 +33,26 @@ int main(int argc, char **argv, char **envp) {
  		else
  			perror("fgets()");
 
- 		if (strcmp(command, "cd") == 0) // caso o comando for "cd"
+ 		if (strcmp(command, "cd") == 0)  // cd <novo diretorio para mudar>
  			if (parameters[1] != NULL)
  				if (chdir(parameters[1]) != 0)
  					perror("chdir()");
- 		if (strcmp(command, "pwd") == 0) // caso o comando for "pwd"
+ 		if (strcmp(command, "pwd") == 0) // pwd
  			printf("%s\n", prompt);
-
- 		switch (pid = fork()) { // executa o processo
-			case -1: // erro
-				perror("fork()");
-				exit(EXIT_FAILURE);
-			case 0: // estamos em um processo filho
-				status = execve(command, parameters, 0);
-				exit(status);
-			default: // estamos em um processo pai
-				if (waitpid(pid, &status, 0) < 0) {
-					perror("waitpid()");
+ 		else                             // ./ep1 <argumentos do EP1>
+ 			switch (pid = fork()) {
+				case -1: // erro
+					perror("fork()");
 					exit(EXIT_FAILURE);
-				}
-		}
+				case 0: // estamos em um processo filho
+					status = execve(command, parameters, 0);
+					exit(status);
+				default: // estamos em um processo pai
+					if (waitpid(pid, &status, 0) < 0) {
+						perror("waitpid()");
+						exit(EXIT_FAILURE);
+					}
+			}
 	}
 	return 0;
 }
