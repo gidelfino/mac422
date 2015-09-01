@@ -19,8 +19,8 @@ int main(int argc, char **argv, char **envp) {
  		else
  			perror("getcwd()");
  		
- 		if (fgets(input, sizeof(input), stdin) != NULL) { // pega a entrada do usuario
- 			if (input[strlen(input) - 1] == '\n')
+ 		if (fgets(input, sizeof(input), stdin) != NULL) { // pega a entrada do usuario e a 
+ 			if (input[strlen(input) - 1] == '\n')		  // divide em comando e parametros
  				input[strlen(input) - 1] = '\0';
  		    token = strtok(input, " ");
  		    command = token;
@@ -37,18 +37,19 @@ int main(int argc, char **argv, char **envp) {
  			if (parameters[1] != NULL)
  				if (chdir(parameters[1]) != 0)
  					perror("chdir()");
+ 		}
  		else if (strcmp(command, "pwd") == 0) // pwd
  			printf("%s\n", prompt);
- 		else                                  // /bin/ls -1      e     ./ep1 <argumentos do EP1>
+ 		else                                  // /bin/ls -1     e    ./ep1 <argumentos do EP1>
  			switch (pid = fork()) {
 				case -1: // erro
 					perror("fork()");
 					exit(EXIT_FAILURE);
-				case 0: // estamos em um processo filho
+				case 0:  // estamos em um processo filho
 					status = execve(command, parameters, 0);
 					exit(status);
-				default: // estamos em um processo pai
-					if (waitpid(pid, &status, 0) < 0) {
+				default: // estamos em um processo pai 
+					if ((waitpid(pid, &status, 0)) < 0) {
 						perror("waitpid()");
 						exit(EXIT_FAILURE);
 					}
