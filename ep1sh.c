@@ -13,25 +13,25 @@ int main(int argc, char **argv, char **envp) {
     char *command;
     char *parameters[1024];
 
-    while (1) {	// inicio do shell
-    	if (getcwd(prompt, sizeof(prompt)) != NULL) // imprime o path no prompt entre colchetes
- 			printf("[%s] ", prompt); 
+    while (42) {	// inicio do shell
+    	if (getcwd(prompt, sizeof(prompt)) != NULL) { // imprime o path no prompt entre colchetes
+ 		//	printf("[%s] ", prompt); 
+			input = readline(prompt);
+			if(command != NULL) {
+				token = strtok(input, " ");
+				command = token;
+				parameters[0] = token;
+				for (i = 1; token != NULL; i++) {
+					token = strtok(NULL, " ");
+					parameters[i] = token;
+				}
+				add_history(command);
+			}
+			else 
+				perror("readline()");
+		}
  		else
  			perror("getcwd()");
- 		
- 		if (fgets(input, sizeof(input), stdin) != NULL) { // pega a entrada do usuario
- 			if (input[strlen(input) - 1] == '\n')
- 				input[strlen(input) - 1] = '\0';
- 		    token = strtok(input, " ");
- 		    command = token;
- 		    parameters[0] = token;
- 		    for (i = 1; token != NULL; i++) {
- 		    	token = strtok(NULL, " ");
- 		    	parameters[i] = token;
- 		    }
- 		}
- 		else
- 			perror("fgets()");
 
  		if (strcmp(command, "cd") == 0) {  // cd <novo diretorio para mudar>
  			if (parameters[1] != NULL)
