@@ -18,13 +18,13 @@ int main(int argc, char **argv, char **envp) {
     	if (getcwd(path, sizeof(path)) != NULL) {
     		strcpy(prompt, "");
 			strcat(strcat(strcat(prompt, "["), path), "] ");
-			input = readline(prompt);
+			input = readline(prompt); // impressao do prompt leitura do input do usuario 
 			if (input[strlen(input) - 1] == '\n')
  				input[strlen(input) - 1] = '\0';
-			if(input != NULL) {
+			if(input != NULL) {		  // adicao do input ao historico
 				add_history(input);
 				token = strtok(input, " ");
-				command = token;
+				command = token;	  // separacao do input entre comando e parametros
 				parameters[0] = token;
 				for (i = 1; token != NULL; i++) {
 					token = strtok(NULL, " ");
