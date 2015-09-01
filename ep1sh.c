@@ -8,16 +8,22 @@ int main(int argc, char **argv, char **envp) {
 	int i;
 	int status;
     char prompt[1024];
-    char input[1024];
+	//char *prompt;
+    //char input[1024];
+	char *input;
     char *token;
     char *command;
     char *parameters[1024];
 
     while (42) {	// inicio do shell
     	if (getcwd(prompt, sizeof(prompt)) != NULL) { // imprime o path no prompt entre colchetes
- 		//	printf("[%s] ", prompt); 
+ 			//printf("[%s] ", prompt); 
+			int n = strlen(prompt);
+			prompt[n] = ' ';
+			prompt[n+1] = '\0';
 			input = readline(prompt);
-			if(command != NULL) {
+			if(input != NULL) {
+				add_history(input);
 				token = strtok(input, " ");
 				command = token;
 				parameters[0] = token;
@@ -25,7 +31,6 @@ int main(int argc, char **argv, char **envp) {
 					token = strtok(NULL, " ");
 					parameters[i] = token;
 				}
-				add_history(command);
 			}
 			else 
 				perror("readline()");
