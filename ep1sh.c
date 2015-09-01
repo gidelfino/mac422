@@ -7,31 +7,35 @@ int main(int argc, char **argv, char **envp) {
 	pid_t pid;
 	int i;
 	int status;
+    char path[1024];
     char prompt[1024];
-    char input[1024];
+	char *input;
     char *token;
     char *command;
     char *parameters[1024];
 
-    while (1) {	// inicio do shell
-    	if (getcwd(prompt, sizeof(prompt)) != NULL) // imprime o path no prompt entre colchetes
- 			printf("[%s] ", prompt); 
+    while (42) {	// inicio do shell
+    	if (getcwd(path, sizeof(path)) != NULL) {
+    		strcpy(prompt, "");
+			strcat(strcat(strcat(prompt, "["), path), "] ");
+			input = readline(prompt);
+			if (input[strlen(input) - 1] == '\n')
+ 				input[strlen(input) - 1] = '\0';
+			if(input != NULL) {
+				add_history(input);
+				token = strtok(input, " ");
+				command = token;
+				parameters[0] = token;
+				for (i = 1; token != NULL; i++) {
+					token = strtok(NULL, " ");
+					parameters[i] = token;
+				}
+			}
+			else 
+				perror("readline()");
+		}
  		else
  			perror("getcwd()");
- 		
- 		if (fgets(input, sizeof(input), stdin) != NULL) { // pega a entrada do usuario e a 
- 			if (input[strlen(input) - 1] == '\n')		  // divide em comando e parametros
- 				input[strlen(input) - 1] = '\0';
- 		    token = strtok(input, " ");
- 		    command = token;
- 		    parameters[0] = token;
- 		    for (i = 1; token != NULL; i++) {
- 		    	token = strtok(NULL, " ");
- 		    	parameters[i] = token;
- 		    }
- 		}
- 		else
- 			perror("fgets()");
 
  		if (strcmp(command, "cd") == 0) {     // cd <novo diretorio para mudar>
  			if (parameters[1] != NULL)
