@@ -7,22 +7,18 @@
 
 int main(int argc, char **argv, char **envp) {
 	pid_t pid;
-	int i;
-	int status;
-    char path[1024];
-    char prompt[1024];
-	char *input;
-    char *token;
-    char *command;
+	int  i, status;
+    char path[1024], prompt[1024];
+	char *input, *token, *command;
     char *parameters[1024];
 
     while (42) {	// inicio do shell
     	if (getcwd(path, sizeof(path)) != NULL) {
     		sprintf(prompt, "[%s] ", path);
     		input = readline(prompt); // impressao do prompt leitura do input do usuario 
-			if (input[strlen(input) - 1] == '\n')
- 				input[strlen(input) - 1] = '\0';
 			if(input != NULL) {		  // adicao do input ao historico
+				if (strcmp(input, "") == 0) 
+					continue; // se o input for vazio, pular para a proxima iteracao
 				add_history(input);
 				token = strtok(input, " ");
 				command = token;	  // separacao do input entre comando e parametros
@@ -34,7 +30,6 @@ int main(int argc, char **argv, char **envp) {
 			}
 			else 
 				perror("readline()");
-			free(input);
 		}
  		else
  			perror("getcwd()");
@@ -45,7 +40,7 @@ int main(int argc, char **argv, char **envp) {
  					perror("chdir()");
  		}
  		else if (strcmp(command, "pwd") == 0) // pwd
- 			printf("%s\n", prompt);
+ 			printf("%s\n", path);
  		else                                  // /bin/ls -1     e    ./ep1 <argumentos do EP1>
  			switch (pid = fork()) {
 				case -1: // erro
@@ -60,6 +55,7 @@ int main(int argc, char **argv, char **envp) {
 						exit(EXIT_FAILURE);
 					}
 			}
+		free(input);
 	}
 	return 0;
 }
