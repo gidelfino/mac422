@@ -18,9 +18,8 @@ int main(int argc, char **argv, char **envp) {
 
     while (42) {	// inicio do shell
     	if (getcwd(path, sizeof(path)) != NULL) {
-    		strcpy(prompt, "");
-			strcat(strcat(strcat(prompt, "["), path), "] ");
-			input = readline(prompt); // impressao do prompt leitura do input do usuario 
+    		sprintf(prompt, "[%s] ", path);
+    		input = readline(prompt); // impressao do prompt leitura do input do usuario 
 			if (input[strlen(input) - 1] == '\n')
  				input[strlen(input) - 1] = '\0';
 			if(input != NULL) {		  // adicao do input ao historico
@@ -35,6 +34,7 @@ int main(int argc, char **argv, char **envp) {
 			}
 			else 
 				perror("readline()");
+			free(input);
 		}
  		else
  			perror("getcwd()");
