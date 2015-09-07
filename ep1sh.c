@@ -5,12 +5,14 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-int main(int argc, char **argv, char **envp) {
-	pid_t pid;
+#define MAX_SIZE 	1024
+
+int main() {
 	int  i, status;
-    char path[1024], prompt[1024];
+    char path[MAX_SIZE], prompt[MAX_SIZE];
 	char *input, *token, *command;
-    char *parameters[1024];
+    char *parameters[MAX_SIZE];
+	pid_t pid;
 
     while (42) {	// inicio do shell
     	if (getcwd(path, sizeof(path)) != NULL) {
