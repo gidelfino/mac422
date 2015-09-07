@@ -40,8 +40,8 @@ int main(int argc, char *argv[]) {
  	int    p[MAX_SIZE];        // prioridade do processo -20 a 19
  	pthread_t threads[MAX_SIZE];
 
- 	if (argc == 4) {
- 		readTraceFile(argv[2], &n, time, name, dtime, deadline, p);
+ 	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
+  		readTraceFile(argv[2], &n, time, name, dtime, deadline, p);
 		switch (*argv[1]) {
 			case '1':
 				printf("First-Come First Served.\n");
