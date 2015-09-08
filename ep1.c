@@ -10,11 +10,10 @@
 #define TIME_TOL	 0.000001
 
 struct process {
-	double time, dtime, deadline;
+	double time, dtime, deadline, ftime;
 	char *name;
 	int p;
 };
-
 typedef struct process Process;
 
 int comp_1(const void *p1, const void *p2) {
@@ -60,21 +59,10 @@ int main(int argc, char *argv[]) {
  	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, procs);
 		qsort(procs, n, sizeof(Process), comp_1);
-		for (i = 0; i < nproc && i < n;) { // comeca os nproc primeiros processos
-			while(1) {
-				end = clock();
-				if(elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC >= procs[i].time - TIME_TOL && elapsed <= procs[i].time + TIME_TOL) {
-					result = pthread_create(&threads[i], NULL, realTimeOperation, NULL);
-					assert(0 == result);
-					i++;
-					break;
-				}
-			}
-		}
-
 		switch (*argv[1]) {
 			case '1':
-				printf("First-Come First Served.\n");
+				printf("First-Come First Served.\n");						
+				
 				break;
 			case '2':
 				printf("Shortest Job First.\n");
