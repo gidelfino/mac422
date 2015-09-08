@@ -3,9 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <assert.h>
 
 #define MAX_SIZE	 1024
+#define TIME_TOL	 0.0000001
 
 void *realTimeOperation() {
 	printf("blah\n");
@@ -32,7 +32,7 @@ void readTraceFile(char *fn, int *n, double time[], char *name[], double dtime[]
 }
 
 int main(int argc, char *argv[]) {
- 	int  result, i, n = 0;
+ 	int  result, nproc, i, n = 0;
  	double time[MAX_SIZE];     // instante de tempo em segundos que o processo chega no sistema
  	char   *name[MAX_SIZE];    // string sem espacos que identifica o processo
  	double dtime[MAX_SIZE];    // quanto tempo real da CPU deve ser simulado para o processo
@@ -40,6 +40,8 @@ int main(int argc, char *argv[]) {
  	int    p[MAX_SIZE];        // prioridade do processo -20 a 19
  	pthread_t threads[MAX_SIZE];
 
+
+ 	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
  	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, time, name, dtime, deadline, p);
 		switch (*argv[1]) {
