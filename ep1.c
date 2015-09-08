@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>	
 #include <pthread.h>
+#include <time.h>
 
 #define MAX_SIZE	 1024
-#define TIME_TOL	 0.0000001
+#define TIME_TOL	 0.000001
 
 void *realTimeOperation() {
 	printf("blah\n");
@@ -39,11 +41,26 @@ int main(int argc, char *argv[]) {
  	double deadline[MAX_SIZE]; // instante de tempo antes do qual o processo precisa terminar
  	int    p[MAX_SIZE];        // prioridade do processo -20 a 19
  	pthread_t threads[MAX_SIZE];
+ 	clock_t start, end, elapsed;
 
-
+ 	start = clock();
  	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
- 	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
+ 	
+ 	if (argc 	== 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, time, name, dtime, deadline, p);
+		
+		for (i = 0; i < nproc && i < n;) { // comeca os nproc primeiros processos
+			while(1) {
+				end = clock();
+				if(elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC >= time[i] - TIME_TOL && elapsed <= time[i] + TIME_TOL) {
+					result = pthread_create(&threads[i], NULL, realTimeOperation, NULL);
+					assert(0 == result);
+					i++;
+					break;
+				}
+			}
+		}
+
 		switch (*argv[1]) {
 			case '1':
 				printf("First-Come First Served.\n");
@@ -64,7 +81,7 @@ int main(int argc, char *argv[]) {
 				printf("Escalonamento em Tempo Real com Deadlines Rigidos.\n");
 				break;
 			default:
-				perror("Escalonador Escolhido Incorreto.\n");
+				printf("Escalonador Escolhido Incorreto.\n");
 				exit(EXIT_FAILURE);
 		}
 	}
@@ -72,22 +89,8 @@ int main(int argc, char *argv[]) {
 		printf("Numero incorreto de parametros.\n");
 		exit(EXIT_FAILURE);
 	}
-
-	for (i = 0; i < n; i++) { //criando threads
-		if (pthread_create(&threads[i], NULL, realTimeOperation, NULL) == 0)
-			continue;
-		else {
-			perror("pthread_create()");
-			exit(EXIT_FAILURE);
-		}
-	}
-	for (i = 0; i < n; i++) { //esperando as threads terminarem
-		if (pthread_join(threads[i], NULL) == 0)
-			continue;
-		else {
-			perror("pthread_join()");
-			exit(EXIT_FAILURE);
-		}
-	}
+	for (i = 0; i < n; i++) //esperando as threads terminarem
+		result = pthread_join(threads[i], NULL);
+		assert(0 == result);
  	return 0;
 }	
