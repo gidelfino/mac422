@@ -24,39 +24,39 @@ typedef struct process Process;
 int comp_1(const void *p1, const void *p2) {
 	const struct process *e1 = p1;
 	const struct process *e2 = p2;
-	if(e1->time > e2->time) return 1;
+	if (e1->time > e2->time) return 1;
 	return 0;
 }
 
 void Lock() {
-	if(pthread_mutex_lock(&mutex) != 0)
+	if (pthread_mutex_lock(&mutex) != 0)
 		perror("Mutex_Lock()");
 }
 
 void Unlock() {
-	if(pthread_mutex_unlock(&mutex) != 0)
+	if (pthread_mutex_unlock(&mutex) != 0)
 		perror("Mutex_Unock()");
 }
 
 void *realTimeOperation(void *time) {
-	clock_t start, end;
-	int i = 1;
 	double t = *((double *) time), elapsed;
-	printf("Rodando %lf\n", t);  
-	nproc = sysconf(_SC_NPROCESSORS_ONLN);
-	nths++;
-	if(nths >= nproc) Lock();
+	clock_t start, end;
+
 	start = clock();
-	while(i == 1) {
+	printf("Rodando %lf\n", t);  
+	nths++;
+	if (nths >= nproc) 
+		Lock();
+	while (1) {
 		end = clock();
 		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
 		if(elapsed >= t) { 
-			printf("Thread terminou %lf elapsed %lf e %lf\n", ((double)end - (double)st) / CLOCKS_PER_SEC, elapsed, t);
+			printf("Thread terminou %lf elapsed -> thread %lf\n", ((double)end - (double)st) / CLOCKS_PER_SEC, t);
 			break; 
 		}
 	}
 	nths--;
-	if(nths < nproc) Unlock();
+	Unlock();
 	return NULL;
 }
 
@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
 	clock_t end;
 	Process procs[MAX_SIZE];
  	pthread_t threads[MAX_SIZE];
+ 	
  	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
- 	printf("proc %d\n", nproc);	
  	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, procs);
 		qsort(procs, n, sizeof(Process), comp_1);
