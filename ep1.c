@@ -9,6 +9,11 @@
 #define MAX_SIZE	 1024
 #define TIME_TOL	 0.000001
 
+
+pthread_mutex_t mutex;
+int nths, nproc;
+clock_t st;
+
 struct process {
 	double time, dtime, deadline, ftime;
 	char *name;
@@ -23,8 +28,34 @@ int comp_1(const void *p1, const void *p2) {
 	return 0;
 }
 
-void *realTimeOperation() {
-	printf("blah\n");
+void Lock() {
+	if(pthread_mutex_lock(&mutex) != 0)
+		perror("Mutex_Lock()");
+}
+
+void Unlock() {
+	if(pthread_mutex_unlock(&mutex) != 0)
+		perror("Mutex_Unock()");
+}
+
+void *realTimeOperation(void *time) {
+	clock_t start, end;
+	int i = 1;
+	double t = *((double *) time), elapsed;
+	printf("Rodando %lf\n", t);  
+	nths++;
+	if(nths == nproc) Lock();
+	start = clock();
+	while(i == 1) {
+		end = clock();
+		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
+		if(t > elapsed) { 
+			printf("Thread terminou %lf elapsed %lf\n", ((double)end - (double)st) / CLOCKS_PER_SEC, elapsed);
+			break; 
+		}
+	}
+	nths--;
+	if(nths < nproc) Unlock();
 	return NULL;
 }
 
@@ -48,21 +79,23 @@ void readTraceFile(char *fn, int *n, Process procs[]) {
 }
 
 int main(int argc, char *argv[]) {
- 	int  result, nproc, i, n = 0;
+ 	int  result, nproc, i, rc, n = 0;
 	Process procs[MAX_SIZE];
  	pthread_t threads[MAX_SIZE];
- 	clock_t start, end, elapsed;
-
- 	start = clock();
  	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
- 	
+ 	printf("proc %d\n", nproc);	
  	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, procs);
 		qsort(procs, n, sizeof(Process), comp_1);
+		st = clock();
 		switch (*argv[1]) {
 			case '1':
 				printf("First-Come First Served.\n");						
-				
+				nths = 0;			
+				for(i = 0; i < n; i++) {
+					rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &procs[i].dtime);
+					assert(rc == 0);
+				}
 				break;
 			case '2':
 				printf("Shortest Job First.\n");
