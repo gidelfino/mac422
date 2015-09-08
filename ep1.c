@@ -83,27 +83,30 @@ void readTraceFile(char *fn, int *n, Process procs[]) {
 }
 
 int main(int argc, char *argv[]) {
- 	int  result, nproc, i, rc, n = 0;
+ 	int nproc, i, rc, n = 0, aux;
 	clock_t end;
  	pthread_t threads[MAX_SIZE];
+	int arguments[MAX_SIZE];
  	
  	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
  	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, procs);
-		qsort(procs, n, sizeof(Process), comp_1);
 		st = clock();
 		switch (*argv[1]) {
 			case '1':
 				printf("First-Come First Served.\n");						
+				qsort(procs, n, sizeof(Process), comp_1);
 				nths = 0;
 				i = 0;
 				while(i < n) {	
 					end = clock();
 					if(((double)end - (double) st) / CLOCKS_PER_SEC  >= procs[i].time - TIME_TOL
 						&& ((double)end - (double) st) / CLOCKS_PER_SEC  <= procs[i].time + TIME_TOL) {
-						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &i);
+						printf("Adicionando thread %d\n", i);
+						arguments[i] = i;
+						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &arguments[i]);
 						assert(0 == rc);
-						i++;
+						i++;	
 					}
 				}
 				break;
@@ -131,8 +134,10 @@ int main(int argc, char *argv[]) {
 		printf("Numero incorreto de parametros.\n");
 		exit(EXIT_FAILURE);
 	}
-	for (i = 0; i < n; i++) //esperando as threads terminarem
-		result = pthread_join(threads[i], NULL);
-		assert(0 == result);
+	for (i = 0; i < n; i++) { //esperando as threads terminarem
+		rc = pthread_join(threads[i], NULL);
+		assert(0 == rc);
+	}
+
  	return 0;
 }	
