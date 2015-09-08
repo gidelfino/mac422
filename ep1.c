@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
  	start = clock();
  	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
  	
- 	if (argc 	== 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
+ 	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, time, name, dtime, deadline, p);
 		
 		for (i = 0; i < nproc && i < n;) { // comeca os nproc primeiros processos
