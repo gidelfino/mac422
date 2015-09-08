@@ -43,14 +43,15 @@ void *realTimeOperation(void *time) {
 	int i = 1;
 	double t = *((double *) time), elapsed;
 	printf("Rodando %lf\n", t);  
+	nproc = sysconf(_SC_NPROCESSORS_ONLN);
 	nths++;
-	if(nths == nproc) Lock();
+	if(nths >= nproc) Lock();
 	start = clock();
 	while(i == 1) {
 		end = clock();
 		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
-		if(t > elapsed) { 
-			printf("Thread terminou %lf elapsed %lf\n", ((double)end - (double)st) / CLOCKS_PER_SEC, elapsed);
+		if(elapsed >= t) { 
+			printf("Thread terminou %lf elapsed %lf e %lf\n", ((double)end - (double)st) / CLOCKS_PER_SEC, elapsed, t);
 			break; 
 		}
 	}
@@ -80,6 +81,7 @@ void readTraceFile(char *fn, int *n, Process procs[]) {
 
 int main(int argc, char *argv[]) {
  	int  result, nproc, i, rc, n = 0;
+	clock_t end;
 	Process procs[MAX_SIZE];
  	pthread_t threads[MAX_SIZE];
  	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
@@ -91,10 +93,16 @@ int main(int argc, char *argv[]) {
 		switch (*argv[1]) {
 			case '1':
 				printf("First-Come First Served.\n");						
-				nths = 0;			
-				for(i = 0; i < n; i++) {
-					rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &procs[i].dtime);
-					assert(rc == 0);
+				nths = 0;
+				i = 0;
+				while(i < n) {	
+					end = clock();
+					if(((double)end - (double) st) / CLOCKS_PER_SEC  >= procs[i].time - TIME_TOL
+						&& ((double)end - (double) st) / CLOCKS_PER_SEC  <= procs[i].time + TIME_TOL) {
+						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &procs[i].dtime);
+						assert(0 == rc);
+						i++;
+					}
 				}
 				break;
 			case '2':
