@@ -9,21 +9,36 @@
 #define MAX_SIZE	 1024
 #define TIME_TOL	 0.000001
 
+struct process {
+	double time, dtime, deadline;
+	char *name;
+	int p;
+};
+
+typedef struct process Process;
+
+int comp_1(const void *p1, const void *p2) {
+	const struct process *e1 = p1;
+	const struct process *e2 = p2;
+	if(e1->time > e2->time) return 1;
+	return 0;
+}
+
 void *realTimeOperation() {
 	printf("blah\n");
 	return NULL;
 }
 
-void readTraceFile(char *fn, int *n, double time[], char *name[], double dtime[], double deadline[], int p[]) {
+void readTraceFile(char *fn, int *n, Process procs[]) {
 	char input[MAX_SIZE];
 	FILE *file = fopen(fn, "r");
 	if (file != NULL)
 		while (fgets(input, sizeof(input), file) != NULL) {
-			sscanf(strtok(input, " "), "%lf", &time[*n]);
-			name[*n] = strtok(NULL, " ");
-			sscanf(strtok(NULL, " "), "%lf", &dtime[*n]);
-			sscanf(strtok(NULL, " "), "%lf", &deadline[*n]);
-			sscanf(strtok(NULL, " "), "%d", &p[*n]);
+			sscanf(strtok(input, " "), "%lf", &procs[*n].time);
+			procs[*n].name = strtok(NULL, " ");
+			sscanf(strtok(NULL, " "), "%lf", &procs[*n].dtime);
+			sscanf(strtok(NULL, " "), "%lf", &procs[*n].deadline);
+			sscanf(strtok(NULL, " "), "%d", &procs[*n].p);
 			*n = *n + 1;
 		}
 	else {
@@ -35,11 +50,7 @@ void readTraceFile(char *fn, int *n, double time[], char *name[], double dtime[]
 
 int main(int argc, char *argv[]) {
  	int  result, nproc, i, n = 0;
- 	double time[MAX_SIZE];     // instante de tempo em segundos que o processo chega no sistema
- 	char   *name[MAX_SIZE];    // string sem espacos que identifica o processo
- 	double dtime[MAX_SIZE];    // quanto tempo real da CPU deve ser simulado para o processo
- 	double deadline[MAX_SIZE]; // instante de tempo antes do qual o processo precisa terminar
- 	int    p[MAX_SIZE];        // prioridade do processo -20 a 19
+	Process procs[MAX_SIZE];
  	pthread_t threads[MAX_SIZE];
  	clock_t start, end, elapsed;
 
@@ -47,12 +58,12 @@ int main(int argc, char *argv[]) {
  	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
  	
  	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
-  		readTraceFile(argv[2], &n, time, name, dtime, deadline, p);
-		
+  		readTraceFile(argv[2], &n, procs);
+		qsort(procs, n, sizeof(Process), comp_1);
 		for (i = 0; i < nproc && i < n;) { // comeca os nproc primeiros processos
 			while(1) {
 				end = clock();
-				if(elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC >= time[i] - TIME_TOL && elapsed <= time[i] + TIME_TOL) {
+				if(elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC >= procs[i].time - TIME_TOL && elapsed <= procs[i].time + TIME_TOL) {
 					result = pthread_create(&threads[i], NULL, realTimeOperation, NULL);
 					assert(0 == result);
 					i++;
