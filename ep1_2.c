@@ -35,19 +35,18 @@ void Lock() {
 
 void Unlock() {
 	if(pthread_mutex_unlock(&mutex) != 0)
-		perror("Mutex_Unock()");
+		perror("Mutex_Unlock()");
 }
 
 void *realTimeOperation(void *time) {
 	clock_t start, end;
-	int i = 1;
 	double t = *((double *) time), elapsed;
-	printf("Rodando %lf\n", t);  
 	nproc = sysconf(_SC_NPROCESSORS_ONLN);
 	nths++;
-	if(nths >= nproc) Lock();
+	printf("Rodando %lf com nths %d e nproc %d\n", t, nths, nproc);  
+	if(nths == nproc) Lock();
 	start = clock();
-	while(i == 1) {
+	while(1) {
 		end = clock();
 		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
 		if(elapsed >= t) { 
@@ -56,7 +55,7 @@ void *realTimeOperation(void *time) {
 		}
 	}
 	nths--;
-	if(nths < nproc) Unlock();
+	Unlock();
 	return NULL;
 }
 
