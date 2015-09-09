@@ -1,6 +1,6 @@
-0.01 processo0 10 11 -20
-1.0 processo1 23.2 11.231 -19
-5.0 processo2 56 15 20 
-1.1 processo3 23.2 0.5 -19
-13 processo4 12 11 5
-2 processo5 11 90 11
+1.0 processo0 10 11 -20
+1.0 processo1 10 11.231 -19
+1.0 processo2 10 15 20 
+1.0 processo3 10 0.5 -19
+1.0 processo4 10 11 5
+1.0 processo5 10 90 11

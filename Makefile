@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -g
 
-all: ep1sh ep1
+all: ep1sh ep11 ep12
 
 ep1sh: ep1sh.c
 	$(CC) ep1sh.c -o ep1sh $(CFLAGS) -lreadline  

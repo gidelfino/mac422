@@ -7,10 +7,11 @@
 #include <time.h>
 
 #define MAX_SIZE	 1024
-#define TIME_TOL	 0.000001
+#define TIME_TOL	 0.0001
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t  cond  = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+int play = 0;
 int nthrs, nproc;
 clock_t st;
 
@@ -42,28 +43,40 @@ void *realTimeOperation(void *pid) {
 	double time, elapsed;
 	int id = *((int *) pid);
 	clock_t start, end;
-
 	time = procs[id].dtime;
-	start = clock();
-	printf("Rodando %d %lf\n", id, time);  
-
-	nthrs++;
-	printf("nthreads = %d\n", nthrs);
-	if (nthrs >= nproc) {
-		printf("LOCKED\n");
-		lock();
+	//printf("Rodando %d %lf\n", id, time);  
+	printf("nthread %d nproc %d\n", nthrs, nproc);
+	lock();
+	if(nthrs == nproc - 1) {
+		printf("Travei no processo %d: %d-%d\n", id, nthrs, nproc);
+		play = 0;
 	}
+	unlock();
+	lock();
+	while(!play) 
+		pthread_cond_wait(&cond, &mutex);
+	unlock();
+	start = clock();
+	printf("Thread %d comecando %lf\n", id, (double)st);
+	nthrs++;
 	while (1) {
 		end = clock();
 		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
 		if(elapsed >= time) { 
-			printf("Thread terminou %lf elapsed -> thread %lf\n", ((double)end - (double)st) / CLOCKS_PER_SEC, time);
+			printf("Thread %d terminou %lf elapsed -> thread %lf\n", id, ((double)end - (double)st) / CLOCKS_PER_SEC, time);
 			procs[id].ftime = ((double)end - (double)st) / CLOCKS_PER_SEC;
 			break; 
 		}
 	}
-	unlock();
 	nthrs--;
+	lock();
+	//printf("Tentando destravar %d %d\n", nthrs, nproc);
+	if(nthrs < nproc - 1) {
+		printf("Destravei no processo %d\n", id);
+		play = 1;
+		pthread_cond_signal(&cond);
+	}
+	unlock();
 	return NULL;
 }
 
@@ -73,7 +86,8 @@ void readTraceFile(char *fn, int *n, Process procs[]) {
 	if (file != NULL)
 		while (fgets(input, sizeof(input), file) != NULL) {
 			sscanf(strtok(input, " "), "%lf", &procs[*n].time);
-			procs[*n].name = strtok(NULL, " ");
+			procs[*n].name = malloc(MAX_SIZE * sizeof(char));
+			strcpy(procs[*n].name, strtok(NULL, " "));
 			sscanf(strtok(NULL, " "), "%lf", &procs[*n].dtime);
 			sscanf(strtok(NULL, " "), "%lf", &procs[*n].deadline);
 			sscanf(strtok(NULL, " "), "%d", &procs[*n].p);
@@ -102,13 +116,13 @@ void writeTraceFile(char *fn, int n, Process procs[], int cc) {
 }
 
 int main(int argc, char *argv[]) {
-	int nproc, i, rc, n = 0;
+	int i, rc, n = 0;
 	int thread_args[MAX_SIZE];
 	pthread_t threads[MAX_SIZE];
 	clock_t end;
 
 	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de processadores do sistema
-
+	printf("nproc %d\n", nproc);
 	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
 		readTraceFile(argv[2], &n, procs);
 		st = clock();
@@ -117,7 +131,7 @@ int main(int argc, char *argv[]) {
 				printf("First-Come First Served.\n");						
 				qsort(procs, n, sizeof(Process), comp_t);
 				nthrs = 0;
-				i = 0;
+				i = 0; play = 1;
 				while(i < n) {	
 					end = clock();
 					if(((double)end - (double) st) / CLOCKS_PER_SEC  >= procs[i].time - TIME_TOL
@@ -162,19 +176,4 @@ int main(int argc, char *argv[]) {
 	pthread_mutex_destroy(&mutex);
 	pthread_cond_destroy(&cond);
 	return 0;
-}
-																																																																																																																																																														}
-																																																		}
-															}
-}
-															}
-				}
-}
-																													}
-							}
-}
-																			}
-												}
-}
-}
 }
