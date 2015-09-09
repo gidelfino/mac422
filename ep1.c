@@ -9,46 +9,50 @@
 #define MAX_SIZE	 1024
 #define TIME_TOL	 0.000001
 
-
-pthread_mutex_t mutex;
-int nths, nproc;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  cond  = PTHREAD_COND_INITIALIZER;
+int nthrs, nproc;
 clock_t st;
 
-struct process {
+struct process { // Struct de processos
 	double time, dtime, deadline, ftime;
 	char *name;
 	int p;
 };
 typedef struct process Process;
-Process procs[MAX_SIZE];
+Process procs[MAX_SIZE]; // Array de processos
 
-int comp_1(const void *p1, const void *p2) {
+int comp_t(const void *p1, const void *p2) { // Funcao utilizada pelo qsort para ordenacao de processos por tempo de inicio
 	const struct process *e1 = p1;
 	const struct process *e2 = p2;
 	if (e1->time > e2->time) return 1;
 	return 0;
 }
 
-void Lock() {
+void lock() {
 	if (pthread_mutex_lock(&mutex) != 0)
-		perror("Mutex_Lock()");
+		perror("pthread_mutex_lock()");
 }
-
-void Unlock() {
+void unlock() {
 	if (pthread_mutex_unlock(&mutex) != 0)
-		perror("Mutex_Unock()");
+		perror("pthread_mutex_unlock()");
 }
 
-void *realTimeOperation(void *iid) {
+void *realTimeOperation(void *pid) {
 	double time, elapsed;
-	int id = *((int *) iid);
+	int id = *((int *) pid);
 	clock_t start, end;
+	
 	time = procs[id].dtime;
 	start = clock();
 	printf("Rodando %d %lf\n", id, time);  
-	nths++;
-	if (nths >= nproc) 
-		Lock();
+	
+	nthrs++;
+	printf("nthreads = %d\n", nthrs);
+	if (nthrs >= nproc) {
+		printf("LOCKED\n");
+		lock();
+	}
 	while (1) {
 		end = clock();
 		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
@@ -58,8 +62,8 @@ void *realTimeOperation(void *iid) {
 			break; 
 		}
 	}
-	nths--;
-	Unlock();
+	unlock();
+	nthrs--;
 	return NULL;
 }
 
@@ -81,30 +85,45 @@ void readTraceFile(char *fn, int *n, Process procs[]) {
 	}
 	fclose(file);
 }
+void writeTraceFile(char *fn, int n, Process procs[], int cc) {
+	int i;
+	FILE *file = fopen(fn, "r");
+	if (file != NULL) {
+		for (i = 0; i < n; i++) 
+			fprintf(file, "%s %lf %lf\n", procs[i].name, procs[i].ftime, procs[i].ftime - procs[i].time);
+		fprintf(file, "%d", cc);
+	}
+	else {
+		perror("fopen()");
+		exit(EXIT_FAILURE);
+	}
+	fclose(file);
+}
+
 
 int main(int argc, char *argv[]) {
- 	int nproc, i, rc, n = 0, aux;
-	clock_t end;
+ 	int nproc, i, rc, n = 0;
+	int thread_args[MAX_SIZE];
  	pthread_t threads[MAX_SIZE];
-	int arguments[MAX_SIZE];
+ 	clock_t end;
+
+ 	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de processadores do sistema
  	
- 	nproc = sysconf(_SC_NPROCESSORS_ONLN); // numero de CPU's do sistema
  	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, procs);
 		st = clock();
 		switch (*argv[1]) {
 			case '1':
 				printf("First-Come First Served.\n");						
-				qsort(procs, n, sizeof(Process), comp_1);
-				nths = 0;
+				qsort(procs, n, sizeof(Process), comp_t);
+				nthrs = 0;
 				i = 0;
 				while(i < n) {	
 					end = clock();
 					if(((double)end - (double) st) / CLOCKS_PER_SEC  >= procs[i].time - TIME_TOL
 						&& ((double)end - (double) st) / CLOCKS_PER_SEC  <= procs[i].time + TIME_TOL) {
-						printf("Adicionando thread %d\n", i);
-						arguments[i] = i;
-						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &arguments[i]);
+						thread_args[i] = i;
+						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &thread_args[i]);
 						assert(0 == rc);
 						i++;	
 					}
@@ -138,6 +157,9 @@ int main(int argc, char *argv[]) {
 		rc = pthread_join(threads[i], NULL);
 		assert(0 == rc);
 	}
-
+	writeTraceFile(argv[3], n, procs, 4);
+ 	
+ 	pthread_mutex_destroy(&mutex);
+ 	pthread_cond_destroy(&cond);
  	return 0;
 }	
