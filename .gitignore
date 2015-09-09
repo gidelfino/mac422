@@ -1,0 +1,9 @@
+# Compiled source #
+ep1
+ep1sh
+*.exe
+.DS_Store
+*.swp
+*.dSYM
+*.o
+
