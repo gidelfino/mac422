@@ -41,7 +41,7 @@ void *realTimeOperation(void *pid) {
 		end = clock();
 		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
 		if(elapsed >= time) { 
-			printf("Thread %d terminou - instante de encerramento: %lf\n", id, (((double)end - (double)gstart) / CLOCKS_PER_SEC));
+			printf("Thread %d terminou %s - instante de encerramento: %lf\n", id, procs[id].name, (((double)end - (double)gstart) / CLOCKS_PER_SEC));
 			procs[id].ftime = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
 			break; 
 		}
@@ -56,7 +56,9 @@ void readTraceFile(char *fn, int *n, Process procs[]) {
 	if (file != NULL)
 		while (fgets(input, sizeof(input), file) != NULL) {
 			sscanf(strtok(input, " "), "%lf", &procs[*n].time);
-			procs[*n].name = strtok(NULL, " ");
+			procs[*n].name = malloc(MAX_SIZE * sizeof(char));
+			strcpy(procs[*n].name, strtok(NULL, " "));
+			printf("Processo %d = %s\n", *n, procs[*n].name);
 			sscanf(strtok(NULL, " "), "%lf", &procs[*n].dtime);
 			sscanf(strtok(NULL, " "), "%lf", &procs[*n].deadline);
 			sscanf(strtok(NULL, " "), "%d", &procs[*n].p);
