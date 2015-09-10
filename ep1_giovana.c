@@ -30,52 +30,81 @@ int comp_t(const void *p1, const void *p2) { // Funcao utilizada pelo qsort para
 	return 0;
 }
 
-int comp_dt(const void *p1, const void *p2) { // Funcao utilizada pelo qsort para ordenacao de processos por tempo a simulado
+int comp_dt(const void *p1, const void *p2) { // Funcao utilizada pelo qsort para ordenacao de processos por tempo a ser simulado
 	const struct process *e1 = p1;
 	const struct process *e2 = p2;
 	if (e1->dtime > e2->dtime) return 1;
 	return 0;
 }
 
-void mutexLock() {
+void threadSuspend(int tid) { // Funcao que suspende o processamento de uma thread
 	if (pthread_mutex_lock(&mutex) != 0) {
 		perror("pthread_mutex_lock()");
 		exit(EXIT_FAILURE);
 	}
-}
-void mutexUnlock() {
+	flags[tid] = 0;
 	if (pthread_mutex_unlock(&mutex) != 0) {
 		perror("pthread_mutex_unlock()");
 		exit(EXIT_FAILURE);
 	}
 }
+void threadResume(int tid) { // Funcao que resume o processamento de uma thread
+	if (pthread_mutex_lock(&mutex) != 0) {
+		perror("pthread_mutex_lock()");
+		exit(EXIT_FAILURE);
+	}
+	flags[tid] = 1;
+	if (pthread_cond_signal(&cond) != 0) {
+		perror("pthread_cond_signal()");
+		exit(EXIT_FAILURE);
+	}
+	if (pthread_mutex_unlock(&mutex) != 0) {
+		perror("pthread_mutex_unlock()");
+		exit(EXIT_FAILURE);
+	}
+}
+void threadStatus(int tid) { // Funcao que verifica o estado de uma thread (suspensa ou nao)
+	while (flags[tid] == 0)
+		if (pthread_cond_wait(&cond, &mutex) != 0) {
+			perror("pthread_cond_wait()");
+			exit(EXIT_FAILURE);
+		}
+}
 
-void *realTimeOperation(void *tid) {
+void *realTimeOperation(void *tid) { // Funcao que realiza uma operacao que consuma tempo real da CPU
 	double time, elapsed;
 	int id = *((int *) tid);
 	clock_t start, end;
 	time = procs[id].dtime;
 
 	nthreads++;
-	if (nthreads > nprocs - 1)
-		mutexLock();
-	start = clock();	
+	if (nthreads > nprocs - 1) //
+		if (pthread_mutex_lock(&mutex) != 0) {
+			perror("pthread_mutex_lock()");
+			exit(EXIT_FAILURE);
+		}
+	start = clock();
 	printf("Rodando %d %lf\n", id, time);
 	while (1) {
+		threadStatus(id);
 		end = clock();
 		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
-		if(elapsed >= time) { 
+		if (elapsed >= time) { 
 			printf("Thread %d terminou -> Tempo: %lf\n", id, ((double)end - (double)gstart) / CLOCKS_PER_SEC);
 			procs[id].timef = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
 			break; 
 		}
 	}
 	mutexUnlock();	
+	if (pthread_mutex_unlock(&mutex) != 0) {
+		perror("pthread_mutex_unlock()");
+		exit(EXIT_FAILURE);
+	}	
 	nthreads--;
 	return NULL;
 }
 
-void readTraceFile(char *fn, int *n, Process procs[]) {
+void readTraceFile(char *fn, int *n, Process procs[]) { // Funcao de leitura do arquivo de trace
 	char input[MAX_SIZE];
 	FILE *file = fopen(fn, "r");
 	if (file != NULL)
@@ -94,7 +123,7 @@ void readTraceFile(char *fn, int *n, Process procs[]) {
 	}
 	fclose(file);
 }
-void writeTraceFile(char *fn, int n, Process procs[], int cc) {
+void writeTraceFile(char *fn, int n, Process procs[], int cc) { // Funcao de escrita do arquivo de trace
 	int i;
 	FILE *file = fopen(fn, "w");
 	if (file != NULL) {
@@ -109,39 +138,48 @@ void writeTraceFile(char *fn, int n, Process procs[], int cc) {
 	fclose(file);
 }
 
-
 int main(int argc, char *argv[]) {
  	int i, rc, n = 0;
 	int thread_args[MAX_SIZE];
  	pthread_t threads[MAX_SIZE];
- 	clock_t end;
+ 	clock_t end, elapsed;
 
- 	nprocs   = sysconf(_SC_NPROCESSORS_ONLN); // numero de processadores do sistema
- 	nthreads = 0; 
- 	gstart = clock();
+ 	nprocs   = sysconf(_SC_NPROCESSORS_ONLN); // numero de processadores do sistema 
+ 	gstart   = clock();
+ 	nthreads = 0;
+ 	
  	for (i = 0; i < MAX_SIZE; i++) 
- 		flags[i] = 0;
+ 		flags[i] = 1;
 
  	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
   		readTraceFile(argv[2], &n, procs);
+		qsort(procs, n, sizeof(Process), comp_t);
 		switch (*argv[1]) {
 			case '1':
 				printf("First-Come First Served.\n");						
-				qsort(procs, n, sizeof(Process), comp_t);
 				for (i = 0; i < n; ) {	
 					end = clock();
-					if(((double)end - (double)gstart) / CLOCKS_PER_SEC  >= procs[i].time - TIME_TOL
-						&& ((double)end - (double)gstart) / CLOCKS_PER_SEC  <= procs[i].time + TIME_TOL) {
+					elapsed = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
+					if (elapsed >= procs[i].time - TIME_TOL && elapsed  <= procs[i].time + TIME_TOL) {
 						thread_args[i] = i;
-						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &thread_args[i]);
+						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &thread_args[i]); 
 						assert(0 == rc);
-						i++;	
+						i++;
 					}
 				}
 				break;
 			case '2':
 				printf("Shortest Job First.\n");
-				
+				for (i = 0; i < n; ) {	
+					end = clock();
+					elapsed = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
+					if (elapsed >= procs[i].time - TIME_TOL && elapsed  <= procs[i].time + TIME_TOL) {
+						thread_args[i] = i;
+						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &thread_args[i]); 
+						assert(0 == rc);
+						i++;
+					}
+				}
 				break;
 			case '3':
 				printf("Shortest Remaining Time Next.\n");
@@ -168,7 +206,6 @@ int main(int argc, char *argv[]) {
 		rc = pthread_join(threads[i], NULL);
 		assert(0 == rc);
 	}
-
 	writeTraceFile(argv[3], n, procs, 4);
  	for (i = 0; i < n; i++)
  		free(procs[i].name);
