@@ -70,8 +70,7 @@ void *realTimeOperation(void *tid) {
 			break; 
 		}
 	}
-	mutexUnlock();
-	
+	mutexUnlock();	
 	nthreads--;
 	return NULL;
 }
@@ -142,6 +141,7 @@ int main(int argc, char *argv[]) {
 				break;
 			case '2':
 				printf("Shortest Job First.\n");
+				
 				break;
 			case '3':
 				printf("Shortest Remaining Time Next.\n");
