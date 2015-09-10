@@ -38,31 +38,32 @@ int comp_dt(const void *p1, const void *p2) { // Funcao utilizada pelo qsort par
 	return 0;
 }
 
-void threadSuspend(int tid) { // Funcao que suspende o processamento de uma thread
+void mutexLock() {
 	if (pthread_mutex_lock(&mutex) != 0) {
 		perror("pthread_mutex_lock()");
 		exit(EXIT_FAILURE);
 	}
-	flags[tid] = 0;
+}
+void mutexUnlock() {
 	if (pthread_mutex_unlock(&mutex) != 0) {
 		perror("pthread_mutex_unlock()");
 		exit(EXIT_FAILURE);
 	}
 }
+
+void threadSuspend(int tid) { // Funcao que suspende o processamento de uma thread
+	mutexLock();
+	flags[tid] = 0;
+	mutexUnlock();
+}
 void threadResume(int tid) { // Funcao que resume o processamento de uma thread
-	if (pthread_mutex_lock(&mutex) != 0) {
-		perror("pthread_mutex_lock()");
-		exit(EXIT_FAILURE);
-	}
+	mutexLock();
 	flags[tid] = 1;
 	if (pthread_cond_signal(&cond) != 0) {
 		perror("pthread_cond_signal()");
 		exit(EXIT_FAILURE);
 	}
-	if (pthread_mutex_unlock(&mutex) != 0) {
-		perror("pthread_mutex_unlock()");
-		exit(EXIT_FAILURE);
-	}
+	mutexUnlock();
 }
 void threadStatus(int tid) { // Funcao que verifica o estado de uma thread (suspensa ou nao)
 	while (flags[tid] == 0)
@@ -70,40 +71,6 @@ void threadStatus(int tid) { // Funcao que verifica o estado de uma thread (susp
 			perror("pthread_cond_wait()");
 			exit(EXIT_FAILURE);
 		}
-}
-
-void *realTimeOperation(void *tid) { // Funcao que realiza uma operacao que consuma tempo real da CPU
-	double time, elapsed;
-	int id = *((int *) tid);
-	clock_t start, end;
-	time = procs[id].dtime;
-
-	nthreads++;
-	if (nthreads > nprocs - 1)
-		if (pthread_mutex_lock(&mutex) != 0) {
-			perror("pthread_mutex_lock()");
-			exit(EXIT_FAILURE);
-		}
-	start = clock();
-	printf("Rodando %d %lf\n", id, time);
-	while (1) {
-		threadStatus(id);
-		end = clock();
-		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
-		if (elapsed >= time) { 
-			printf("Thread %d terminou -> Tempo: %lf\n", id, ((double)end - (double)gstart) / CLOCKS_PER_SEC);
-			procs[id].timef = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
-			break; 
-		}
-	}	
-	if (pthread_mutex_unlock(&mutex) != 0) {
-		perror("pthread_mutex_unlock()");
-		exit(EXIT_FAILURE);
-	}	
-	nthreads--;
-	if (dflag == 1)
-		printf("Processo da linha [%d] finalizado, escrito na linha [%d]\n", procs[id].traceline, id + 1);
-	return NULL;
 }
 
 void readTraceFile(int argc, char *fn, int *n, Process procs[]) { // Funcao de leitura do arquivo de trace
@@ -141,12 +108,39 @@ void writeTraceFile(char *fn, int n, Process procs[], int cc) { // Funcao de esc
 	fclose(file);
 }
 
+void *realTimeOperation(void *tid) { // Funcao que realiza uma operacao que consuma tempo real da CPU
+	double time, elapsed;
+	int id = *((int *) tid);
+	clock_t start, end;
+	time = procs[id].dtime;
+	
+	if (nthreads >= nprocs )
+		mutexLock();
+	mutexLock(); nthreads++; mutexUnlock();
+	start = clock();
+	printf("Rodando %d %lf\n", id, time);
+	while (1) {
+		threadStatus(id);
+		end = clock();
+		elapsed = ((double)end - (double)start) / CLOCKS_PER_SEC;
+		if (elapsed >= time) { 
+			printf("Thread %d terminou -> Tempo: %lf\n", id, ((double)end - (double)gstart) / CLOCKS_PER_SEC);
+			procs[id].timef = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
+			break; 
+		}
+	}		
+	mutexUnlock();
+	nthreads--;
+	if (dflag == 1)
+		printf("Processo da linha [%d] finalizado, escrito na linha [%d]\n", procs[id].traceline, id + 1);
+	return NULL;
+}
+
 void firstCome(int n, pthread_t threads[]) {
 	int i, rc, thread_args[MAX_SIZE];
 	clock_t end, elapsed;
 	
 	printf("First-Come First Served.\n");						
-	qsort(procs, n, sizeof(Process), comp_dt);
 	for (i = 0; i < n; ) {	
 		end = clock();
 		elapsed = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
@@ -160,7 +154,7 @@ void firstCome(int n, pthread_t threads[]) {
 		}
 	}
 }
-
+/*s
 void shortestJob(int n, pthread_t threads[]) {
 	int i, rc, thread_args[MAX_SIZE];
 	clock_t end, elapsed;
@@ -193,8 +187,10 @@ void shortestJob(int n, pthread_t threads[]) {
 		else
 			// qsort comp_dt na fila
 
-	}*/
+	}
 }
+*/
+
 int main(int argc, char *argv[]) {
  	int i, rc, n = 0;
  	pthread_t threads[MAX_SIZE];
@@ -211,15 +207,16 @@ int main(int argc, char *argv[]) {
   		if (argc == 5) //			  4- (opcional) caracter d
   			if (strcmp(argv[4], "d") == 0)
   				dflag = 1;
-  				
+  		
   		readTraceFile(argc, argv[2], &n, procs);
+  		qsort(procs, n, sizeof(Process), comp_t);
 
 		switch (*argv[1]) {
 			case '1':
 				firstCome(n, threads);
 				break;
 			case '2':
-				shortestJob(n, threads);
+				//shortestJob(n, threads);
 				break;
 			case '3':
 				printf("Shortest Remaining Time Next.\n");
@@ -246,6 +243,8 @@ int main(int argc, char *argv[]) {
 		rc = pthread_join(threads[i], NULL);
 		assert(0 == rc);
 	}
+	if (dflag == 1) 
+		printf("Numero de mudancas de contexto: %d\n", 0);
 	writeTraceFile(argv[3], n, procs, 0);
  	for (i = 0; i < n; i++)
  		free(procs[i].name);
