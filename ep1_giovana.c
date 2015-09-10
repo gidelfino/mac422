@@ -7,18 +7,19 @@
 #include <time.h>
 
 #define MAX_SIZE	 1024
-#define TIME_TOL	 0.0001
+#define TIME_TOL	 0.1
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  cond  = PTHREAD_COND_INITIALIZER;
 
-int nprocs, nthreads, flags[MAX_SIZE];
+int nprocs, nthreads, dflag, flags[MAX_SIZE];
 clock_t gstart;
 
 struct process { // Struct de processos
 	double time, dtime, deadline, timef;
 	char *name;
 	int p;
+	int traceline;
 };
 typedef struct process Process;
 Process procs[MAX_SIZE]; // Array de processos
@@ -78,7 +79,7 @@ void *realTimeOperation(void *tid) { // Funcao que realiza uma operacao que cons
 	time = procs[id].dtime;
 
 	nthreads++;
-	if (nthreads > nprocs - 1) //
+	if (nthreads > nprocs - 1)
 		if (pthread_mutex_lock(&mutex) != 0) {
 			perror("pthread_mutex_lock()");
 			exit(EXIT_FAILURE);
@@ -94,17 +95,18 @@ void *realTimeOperation(void *tid) { // Funcao que realiza uma operacao que cons
 			procs[id].timef = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
 			break; 
 		}
-	}
-	mutexUnlock();	
+	}	
 	if (pthread_mutex_unlock(&mutex) != 0) {
 		perror("pthread_mutex_unlock()");
 		exit(EXIT_FAILURE);
 	}	
 	nthreads--;
+	if (dflag == 1)
+		printf("Processo da linha [%d] finalizado, escrito na linha [%d]\n", procs[id].traceline, id + 1);
 	return NULL;
 }
 
-void readTraceFile(char *fn, int *n, Process procs[]) { // Funcao de leitura do arquivo de trace
+void readTraceFile(int argc, char *fn, int *n, Process procs[]) { // Funcao de leitura do arquivo de trace
 	char input[MAX_SIZE];
 	FILE *file = fopen(fn, "r");
 	if (file != NULL)
@@ -115,6 +117,7 @@ void readTraceFile(char *fn, int *n, Process procs[]) { // Funcao de leitura do 
 			sscanf(strtok(NULL, " "), "%lf", &procs[*n].dtime);
 			sscanf(strtok(NULL, " "), "%lf", &procs[*n].deadline);
 			sscanf(strtok(NULL, " "), "%d", &procs[*n].p);
+			procs[*n].traceline = *n + 1;
 			*n = *n + 1;
 		}
 	else {
@@ -138,48 +141,85 @@ void writeTraceFile(char *fn, int n, Process procs[], int cc) { // Funcao de esc
 	fclose(file);
 }
 
+void firstCome(int n, pthread_t threads[]) {
+	int i, rc, thread_args[MAX_SIZE];
+	clock_t end, elapsed;
+	
+	printf("First-Come First Served.\n");						
+	qsort(procs, n, sizeof(Process), comp_dt);
+	for (i = 0; i < n; ) {	
+		end = clock();
+		elapsed = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
+		if (elapsed >= procs[i].time - TIME_TOL && elapsed  <= procs[i].time + TIME_TOL) {
+			if (dflag == 1)
+				printf("Processo da linha [%d] chegou ao sistema.\n", procs[i].traceline);
+			thread_args[i] = i;
+			rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &thread_args[i]); 
+			assert(0 == rc);
+			i++;
+		}
+	}
+}
+
+void shortestJob(int n, pthread_t threads[]) {
+	int i, rc, thread_args[MAX_SIZE];
+	clock_t end, elapsed;
+
+	printf("Shortest Job First.\n");
+	i = 0;
+	while (nthreads < nprocs && i < n) {	
+		end = clock();
+		elapsed = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
+		if (elapsed >= procs[i].time - TIME_TOL && elapsed  <= procs[i].time + TIME_TOL) {
+			if (dflag == 1)
+				printf("Processo da linha [%d] chegou ao sistema.\n", procs[i].traceline);
+			thread_args[i] = i;
+			rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &thread_args[i]); 
+			assert(0 == rc);
+			i++;
+		}
+	}
+	while (i < n) {
+		end = clock();
+		elapsed = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
+		if (elapsed >= procs[i].time - TIME_TOL && elapsed  <= procs[i].time + TIME_TOL) {
+			if (dflag == 1)
+				printf("Processo da linha [%d] chegou ao sistema.\n", procs[i].traceline);
+			// coloque o processo na fila
+		if (nthreads < nprocs) {
+			// criar uma thread para o primeiro processo da fila
+			i++
+		}
+		else
+			// qsort comp_dt na fila
+
+	}*/
+}
 int main(int argc, char *argv[]) {
  	int i, rc, n = 0;
-	int thread_args[MAX_SIZE];
  	pthread_t threads[MAX_SIZE];
- 	clock_t end, elapsed;
 
  	nprocs   = sysconf(_SC_NPROCESSORS_ONLN); // numero de processadores do sistema 
  	gstart   = clock();
  	nthreads = 0;
+ 	dflag 	 = 0;
  	
  	for (i = 0; i < MAX_SIZE; i++) 
  		flags[i] = 1;
 
- 	if (argc == 4) { // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
-  		readTraceFile(argv[2], &n, procs);
-		qsort(procs, n, sizeof(Process), comp_t);
+ 	if (argc >= 4) {   // parametros: 1- numero do escalonador 2- nome do arquivo trace 3- nome do arquivo a ser criado
+  		if (argc == 5) //			  4- (opcional) caracter d
+  			if (strcmp(argv[4], "d") == 0)
+  				dflag = 1;
+  				
+  		readTraceFile(argc, argv[2], &n, procs);
+
 		switch (*argv[1]) {
 			case '1':
-				printf("First-Come First Served.\n");						
-				for (i = 0; i < n; ) {	
-					end = clock();
-					elapsed = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
-					if (elapsed >= procs[i].time - TIME_TOL && elapsed  <= procs[i].time + TIME_TOL) {
-						thread_args[i] = i;
-						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &thread_args[i]); 
-						assert(0 == rc);
-						i++;
-					}
-				}
+				firstCome(n, threads);
 				break;
 			case '2':
-				printf("Shortest Job First.\n");
-				for (i = 0; i < n; ) {	
-					end = clock();
-					elapsed = ((double)end - (double)gstart) / CLOCKS_PER_SEC;
-					if (elapsed >= procs[i].time - TIME_TOL && elapsed  <= procs[i].time + TIME_TOL) {
-						thread_args[i] = i;
-						rc = pthread_create(&threads[i], NULL, realTimeOperation, (void *) &thread_args[i]); 
-						assert(0 == rc);
-						i++;
-					}
-				}
+				shortestJob(n, threads);
 				break;
 			case '3':
 				printf("Shortest Remaining Time Next.\n");
@@ -206,7 +246,7 @@ int main(int argc, char *argv[]) {
 		rc = pthread_join(threads[i], NULL);
 		assert(0 == rc);
 	}
-	writeTraceFile(argv[3], n, procs, 4);
+	writeTraceFile(argv[3], n, procs, 0);
  	for (i = 0; i < n; i++)
  		free(procs[i].name);
  	pthread_mutex_destroy(&mutex);
